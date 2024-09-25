@@ -1,0 +1,447 @@
+---
+title: "Analisis Exploratorio"
+author: "Marcela Vivas"
+date: "2024-01-31"
+output: 
+  html_document:
+    toc: yes
+    toc_depth: 2
+long: es-ES
+---
+
+```{r echo=FALSE}
+library(readxl)
+Datos <- read_excel("BD_ALGORITMOS_DENGUE_ACT.xlsx",sheet = "Hoja1")
+
+#Se vuelve factor el patron de oro
+Datos$DX<-factor(Datos$DX)
+```
+
+## Estadisticas descriptivas
+
+-   Recuento normal de **leucocitos** es de 4,500 a 11,000 GB por microlitro, recuento bajo de leucocitos (leucopenia) es de menos de 4,500 celulas por microlitro (<https://medlineplus.gov/spanish/ency/article/003643.htm#>)
+
+-   Recuento normal de **plaquetas** es de 150,000 a 400,000 plaquetas por microlitro, un conteo bajo de plaquetas (trombocitopenia) es de menos de 150,000, inferior a 50000 es grave. (<https://www.nhlbi.nih.gov/es/salud/trastornos-plaquetarios/diagnostico#>)
+
+-   Recuento normal de **monocitos** es de 100 a 800 microlitros (<https://okdiario.com/salud/monocitos-valores-normales-2803544>)
+
+-   Recuento normal de **Hematocritos** de 36 a 48% para mujeres y 42 a 52% para hombres (<https://www.stanfordchildrens.org/es/topic/default?id=hematocrit-167-hematocrit_ES>)
+
+-   Recuento normal de **Hemoglobina** para Hombre: de 13.8 a 17.2 gramos por decilitro (g/dL) o 138 a 172 gramos por litro (g/L) y Mujer: de 12.1 a 15.1 g/dL o 121 a 151 g/L (<https://medlineplus.gov/spanish/ency/article/003645.htm>)
+
+-   Recuento normal de **Linfocitos** es de 1.000 y 4.000 linfocitos en un microlitro (<https://www.salud.mapfre.es/enfermedades/hematologicas/significado-leucocitos-valor-bajo-y-alto/#>)
+
+-   Recuento normal de **Neutrofilos** es de 2.000 y 8.000 neutrófilos en un microlitro
+
+```{r echo=FALSE}
+#Estadisticas descriptivas 
+enfermos <- Datos[Datos$DX == "1", ]
+noenfermos <- Datos[Datos$DX == "0", ]
+```
+
+Se realiza un analisis de las variables en general
+
+```{r}
+summary(Datos)
+```
+
+Se realiza un analisis de las variables divididas en enfermos y no enfermos
+
+```{r}
+#Enfermos
+summary(enfermos)
+#No enfermos 
+summary(noenfermos)
+```
+
+## Histogramas
+
+Como primer paso se muestra un histograma general por cada variable a estudiar
+
+```{r warning=FALSE, message=FALSE}
+library(GGally)
+library(ggplot2)
+library(patchwork) #une los graficos en una sola imagen
+
+```
+
+```{r echo=FALSE,warning=FALSE }
+histograma_leucocitos <- ggplot(data = Datos, aes(x = p9_Leuco)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Leucocitos',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_plaquetas <- ggplot(data = Datos, aes(x = p10_Plaquetas)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Plaquetas',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_monocitos <- ggplot(data = Datos, aes(x = nmono)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Monocitos',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_hematocrito <- ggplot(data = Datos, aes(x = hematocrito)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Hematocrito',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_hemoglobina <- ggplot(data = Datos, aes(x = hemoglobin)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Hemoglobina',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_linfocitos <- ggplot(data = Datos, aes(x = nlinfocitos)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Linfocitos',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_Neutrofilos <- ggplot(data = Datos, aes(x = nneutros)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Neutrofilos',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_hemahemo <- ggplot(data = Datos, aes(x = hematocrito_hemoglobina)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Hematocrito / Hemoglobina',
+       y = 'Densidad') +
+  theme_minimal()
+histograma_linneu <- ggplot(data = Datos, aes(x = linfocitos_neutrofilos)) +
+  geom_histogram(aes(y = ..density..), bins = 9, fill = "#3F719E", color = "black", alpha = 0.8) +
+  geom_density(color = "#B81840", linetype = "solid", size = 0.5) +
+  labs(title = '',
+       x = 'Linfocitos / Neutrofilos',
+       y = 'Densidad') +
+  theme_minimal()
+
+histogramas_combinados = histograma_leucocitos + histograma_plaquetas + histograma_monocitos +  histograma_hematocrito + histograma_hemoglobina  + histograma_leucocitos + histograma_Neutrofilos + histograma_hemahemo + histograma_linneu +
+  plot_layout(guides = 'collect')
+print(histogramas_combinados)
+```
+
+Luego se procede a realizar un histograma por variable pero diviendo el mismo por enfermos y no enfermos
+
+```{r echo=FALSE,warning=FALSE}
+grafico1 = ggplot(data = Datos,
+       mapping = aes(x = p9_Leuco,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.2) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Leucocitos',y = 'Densidad') +
+  theme_minimal()
+grafico2 = ggplot(data = Datos,
+       mapping = aes(x = p10_Plaquetas,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Plaquetas',y = 'Densidad') +
+  theme_minimal()
+grafico3 = ggplot(data = Datos,
+       mapping = aes(x = nmono,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Monocitos',y = 'Densidad') +
+  theme_minimal()
+grafico4 = ggplot(data = Datos,
+       mapping = aes(x = hematocrito,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Hematocrito',y = 'Densidad') +
+  theme_minimal()
+grafico5 = ggplot(data = Datos,
+       mapping = aes(x = hemoglobin,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Hemoglobina',y = 'Densidad') +
+  theme_minimal()
+grafico6 = ggplot(data = Datos,
+       mapping = aes(x = nlinfocitos,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Linfocitos',y = 'Densidad') +
+  theme_minimal()
+grafico7 = ggplot(data = Datos,
+       mapping = aes(x = nneutros,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Neutrofilos',y = 'Densidad') +
+  theme_minimal()
+grafico8 = ggplot(data = Datos,
+       mapping = aes(x = hematocrito_hemoglobina,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') + 
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '', fill = 'DX',color = 'DX',x = 'Hematocrito / Hemoglobina',y = 'Densidad') +
+  theme_minimal()
+grafico9 = ggplot(data = Datos,
+       mapping = aes(x = linfocitos_neutrofilos,
+                     fill = factor(DX),
+                     color = factor(DX))) +
+  geom_histogram(aes(y = ..density..),
+                 bins = 9,
+                 position = 'identity',
+                 alpha = 0.8,
+                 color = 'black') +  
+  geom_density(alpha = 0.2) +
+  geom_freqpoly(stat = 'density',
+                bins = 9,
+                size = 0.5) +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  scale_color_manual(values = c("0" = "#2A5783", "1" = "#B81840")) +
+  labs(title = '',fill = 'DX',color = 'DX',x = 'Linfocitos / Neutrofilos',y = 'Densidad') +
+  theme_minimal()
+graficos_combinados = grafico1 + grafico2 + grafico3 + grafico4 + grafico5 +
+  grafico6 + grafico7 + grafico8 + grafico9 +
+  plot_layout(guides = 'collect')
+print(graficos_combinados)
+
+```
+
+## Boxplot
+
+```{r echo=FALSE}
+library(readxl)
+Datosoriginal <- read_excel("BD_ALGORITMOS_DENGUE_ACT.xlsx",sheet = "Hoja2")
+Datosoriginal$DX<-factor(Datosoriginal$DX)
+```
+
+```{r echo=FALSE,warning=FALSE}
+boxplot1 <- ggplot(Datosoriginal, aes(x = DX, y = p9_Leuco, fill = DX)) + 
+  geom_boxplot() + labs( y='Leucocitos') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot2 <- ggplot(Datosoriginal, aes(x = DX, y = p10_Plaquetas, fill = DX)) + 
+  geom_boxplot() +  labs( y='Plaquetas') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot3 <- ggplot(Datosoriginal, aes(x = DX, y = nmono, fill = DX)) + 
+  geom_boxplot() +  labs( y='Monocitos') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot4 <- ggplot(Datosoriginal, aes(x = DX, y = hematocrito, fill = DX)) + 
+  geom_boxplot() +  labs( y='Hematocrito') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot5 <- ggplot(Datosoriginal, aes(x = DX, y = hemoglobin, fill = DX)) + 
+  geom_boxplot() +  labs( y='Hemoglobina') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot6 <- ggplot(Datosoriginal, aes(x = DX, y = nlinfocitos, fill = DX)) + 
+  geom_boxplot() +  labs( y='Linfocitos') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot7 <- ggplot(Datosoriginal, aes(x = DX, y = nneutros, fill = DX)) + 
+  geom_boxplot() +  labs( y='Neutrofilos') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot8 <- ggplot(Datosoriginal, aes(x = DX, y = hematocrito_hemoglobina, fill = DX)) + 
+  geom_boxplot() +  labs( y='Hematocrito / Hemoglobina') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot9 <- ggplot(Datosoriginal, aes(x = DX, y = linfocitos_neutrofilos, fill = DX)) + 
+  geom_boxplot() +  labs( y='Linfocitos / Neutrofilos') +
+  scale_fill_manual(values = c("0" = "#3F719E", "1" = "#B980A7")) +
+  theme(legend.position = "none")
+boxplot_combinados = boxplot1 + boxplot2 + boxplot3 + boxplot4 + boxplot5 + boxplot6 + boxplot7 + boxplot8 + boxplot9 + 
+  plot_layout(guides = 'collect')
+print(boxplot_combinados)
+
+```
+
+se observan valores atipicos en todas las variables por tanto se procede a analizar dichos valores
+
+## Deteccion de Valores atipicos
+
+```{r echo=FALSE, message=FALSE}
+### Leucocitos
+statsLeu <- boxplot.stats(Datosoriginal$p9_Leuco)
+which(Datosoriginal$p9_Leuco %in% statsLeu$out)
+outLeu <- Datosoriginal[which(Datosoriginal$p9_Leuco %in% statsLeu$out), ]
+```
+
+```{r mostrar_leu, message=FALSE}
+#Leucocitos
+library(knitr)
+kable(outLeu, format = "markdown", row.names = FALSE)
+```
+
+```{r echo=FALSE,message=FALSE}
+### Plaquetas
+statspla <- boxplot.stats(Datosoriginal$p10_Plaquetas)
+which(Datosoriginal$p10_Plaquetas %in% statspla$out)
+outpla <- Datosoriginal[which(Datosoriginal$p10_Plaquetas %in% statspla$out),]
+```
+
+```{r mostrar_pla,message=FALSE}
+#Plaquetas
+library(knitr)
+kable(outpla, format = "markdown", row.names = FALSE)
+```
+
+```{r echo=FALSE, message=FALSE}
+### Monocitos
+statsmono <- boxplot.stats(Datosoriginal$nmono)
+which(Datosoriginal$nmono %in% statsmono$out)
+outmono <- Datosoriginal[which(Datosoriginal$nmono %in% statsmono$out), ]
+```
+
+```{r mostrar_mono, message=FALSE}
+#Monocitos
+library(knitr)
+kable(outmono, format = "markdown", row.names = FALSE)
+```
+
+```{r echo=FALSE,message=FALSE}
+### Hematocrito / Hemoglobina
+statshemahemo<- boxplot.stats(Datosoriginal$hematocrito_hemoglobina)
+which(Datosoriginal$hematocrito_hemoglobina %in% statshemahemo$out)
+outhemahemo <- Datosoriginal[which(Datosoriginal$hematocrito_hemoglobina %in% statshemahemo$out), ]
+```
+
+```{r mostrar_hemahemo, message=FALSE}
+#Hematocrito / Hemoglobina
+library(knitr)
+kable(outhemahemo, format = "markdown", row.names = FALSE)
+```
+
+```{r echo=FALSE, message=FALSE}
+### Linfocitos / Neutrofilos
+statslineu <- boxplot.stats(Datosoriginal$linfocitos_neutrofilos)
+which(Datosoriginal$linfocitos_neutrofilos %in% statslineu$out)
+outlineu <- Datosoriginal[which(Datosoriginal$linfocitos_neutrofilos %in% statslineu$out), ]
+```
+
+```{r mostrar_lineu, message=FALSE}
+# Linfocitos / Neutrofilos
+library(knitr)
+kable(outlineu, format = "markdown", row.names = FALSE)
+```
+
+## Matrix de correlacion de Pearson
+
+```{r echo=FALSE, message=FALSE}
+library(dplyr)
+colnames(Datos)[1:5] = c(
+  "p9_Leuco" = "Leucocitos",
+  "p10_Plaquetas" = "Plaquetas",
+  "nmono" = "Monocitos",
+  "hematocrito_hemoglobina" = "Hematocrito / Hemoglobina",
+  "linfocitos_neutrofilos" = "Linfocitos / Neutrofilos"
+) #Renombro las columnas 
+
+correlaciones <- ggpairs(
+  Datos[, 1:5],                           # Columnas a incluir
+  mapping = aes(color = Datos$DX),        # Mapeo de colores por categoría DX
+  lower = list(continuous = "points"),    # Mostrar puntos en la parte inferior
+  diag = list(continuous = "barDiag", fill = Datos$DX),  # Histograma en la diagonal con colores según DX
+  axisLabels = "show",                    # Mostrar etiquetas de los ejes
+  columns = c("Leucocitos", "Plaquetas", "Monocitos", "Hematocrito / Hemoglobina", "Linfocitos / Neutrofilos"),  # Nombres personalizados de las variables
+  upper = list(continuous = wrap("cor", method = "pearson")), # Líneas de correlación
+  title = ""             # Título del gráfico
+) +
+  scale_color_manual(values = c("#3F719E", "#B980A7")) +
+  scale_fill_manual(values = c("#3F719E", "#B980A7"))  # Establecer colores manualmente
+
+print(correlaciones)
+```

@@ -1,0 +1,27 @@
+{
+    "id": "291E03F9",
+    "path": "~/UNIVALLE/TRABAJO DE GRADO/R/Analisis de las distribuciones marginales/Analisis de las distribuciones.R",
+    "project_path": "Analisis de las distribuciones marginales/Analisis de las distribuciones.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1708977694343.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "499,0",
+        "scrollLine": "188",
+        "docOutlineVisible": "0"
+    },
+    "folds": "188|12|432|0|\n433|25|494|0|\n",
+    "lastKnownWriteTime": 1716228403,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1716228404026,
+    "read_only": false,
+    "read_only_alternatives": []
+}

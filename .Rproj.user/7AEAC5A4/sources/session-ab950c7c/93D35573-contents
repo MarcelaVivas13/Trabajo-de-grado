@@ -1,0 +1,114 @@
+library(copula)
+#todos #dengue
+copulafrank1 <- frankCopula(0.6779 , dim = 5)
+#no enfermos #no dengue
+copulafrank2 <- frankCopula(0.8926  , dim = 5)
+
+# 1000 Dengue
+set.seed(123)
+n1 <- 1000
+DengueSimulada <-rCopula(n1,copulafrank1)
+DengueSimulada <- data.frame(DengueSimulada)
+fdensidad3  = dCopula(as.matrix(DengueSimulada), copulafrank1)
+plot(fdensidad3)
+# 9000 No dengue
+set.seed(123)
+n2 <- 9000
+NoDengueSimulada<-rCopula(n2,copulafrank2)
+NoDengueSimulada <- data.frame(NoDengueSimulada)
+fdensidad4  = dCopula(as.matrix(NoDengueSimulada), copulafrank)
+plot(fdensidad4)
+par (mfrow= c(1,2))
+hist(fdensidad4)
+hist(fdensidad3)
+
+Conjunta <- rbind(DengueSimulada,NoDengueSimulada)
+
+#estimo los parametros de la frank conjunta
+copulafrank3 <- frankCopula(dim = 5);N <-  26
+fit.tauR <- fitCopula(copulafrank3, Conjunta,method="ml")
+
+#encuentro la densidad de la copula conjunta
+copulafrank4 <- frankCopula(0.863 , dim = 5)
+fdensidad1  = dCopula(as.matrix(Conjunta), copulafrank4)
+
+#Dx 
+dxdengue <- c(rep(1,1000),rep(0,9000))
+Conjunta_DX <- cbind(fdensidad1,dxdengue)
+Conjunta_DX = data.frame(Conjunta_DX) 
+Conjunta_DX$dxdengue <- as.factor(Conjunta_DX$dxdengue)
+
+
+#curva de presicion y recall para un solo punto de corte 
+library(PRROC)
+pr<-pr.curve(scores.class0 = Conjunta_DX$fdensidad1 , weights.class0 = Conjunta_DX$dxdengue, curve = TRUE)
+plot(pr)
+pr1<-pr.curve(scores.class0 = fdensidad4 , scores.class1 =  fdensidad3, curve = TRUE)
+plot(pr1)
+pr$curve
+
+recall <- pr$curve[, 1]  
+precision <- pr$curve[, 2]     
+thresholds <- pr$curve[, 3]
+summary(thresholds)
+plot(thresholds)
+
+# Calcular F-score para cada punto
+f_score <- 2 * precision * recall / (precision + recall)
+plot(f_score)
+# Obtener el umbral correspondiente al máximo F-score
+umbral <- thresholds[which.max(f_score)]
+
+
+#punto de corte 
+PC <- c()
+for (i in 1:10000) {
+  datos2 <- data.frame(dxdengue=c(rep(1,1000), rep(0,9000)), densidad=c(sample(Conjunta_DX[Conjunta_DX$dxdengue == "1" ,]$fdensidad1, replace = TRUE), sample(Conjunta_DX[Conjunta_DX$dxdengue == "0" ,]$fdensidad1, replace = TRUE)))
+  
+  pr <- pr.curve(scores.class0 = datos2$densidad , weights.class0 = datos2$dxdengue, curve = TRUE)
+  
+  recall <- pr$curve[, 1]  
+  precision <- pr$curve[, 2]     
+  thresholds <- pr$curve[, 3]
+  
+  f_score <- 2 * precision * recall / (precision + recall)
+  PC[i] <- thresholds[which.max(f_score)]
+  
+}
+hist(PC)
+
+median(PC)
+
+
+#evaluación punto de corte 
+enfermos1 = data.frame(matriz,Datos$DX) #bd transformadas de la bd inicial y dx
+enfermos0 = subset(enfermos1, enfermos1$Datos.DX == 1) #filtro la bd anterior solo por los dx =1 (enfermos)
+enfermos0 = enfermos0[,-6]
+enfermos0 = as.matrix(enfermos0) #bd transformada solo para los 1
+
+fdensidadenfermos = dCopula(enfermos0, copulafrank1) #funcion copula para los enfermos (24 datos)
+fdensidadnoenfermos = dCopula(matriz3, copulafrank2) #funcion de densidad no enfermos
+fdensidadfinal = c(fdensidadenfermos,fdensidadnoenfermos) #funcion de densidad conjunta 
+
+
+dxdengue <- c(rep(1,24),rep(0,300)) #gold standar
+# Densidades para las variables originales
+BaseFinal<-cbind(fdensidadfinal,dxdengue) #base final de densidades con los datos originales 
+
+# Clasificando con el punto de corte
+clasificacionfinal <- as.factor(ifelse(BaseFinal[,1]>median(PC),"0","1")) 
+table(dxdengue,clasificacionfinal)
+library(xtable)
+xtable(table(dxdengue,clasificacionfinal))
+
+
+dxdengue5 <- c(rep(1,1000),rep(0,9000))
+# Densidades para las variables originales
+fdensidadsimulada = c(fdensidad3,fdensidad4)
+BaseFinalsimulada<-cbind(fdensidadsimulada,dxdengue)
+
+# Clasificando con el punto de corte
+clasificacionfinalsimulada <- as.factor(ifelse(BaseFinalsimulada[,1]>median(PC),"0","1")) 
+table(dxdengue5,clasificacionfinalsimulada)
+xtable(table(dxdengue5,clasificacionfinalsimulada))
+

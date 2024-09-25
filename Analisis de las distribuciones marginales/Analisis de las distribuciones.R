@@ -1,0 +1,879 @@
+###  librerias ###
+library(readxl);library(GGally);library(ggplot2);library(patchwork)
+library(rriskDistributions);library("fitdistrplus");library(stats)
+library(MASS);library(nortest);library(goftest);library(rmutil)
+
+#Base de datos
+Datos <- read_excel("BD_ALGORITMOS_DENGUE_ACT.xlsx",sheet = "Hoja1")
+
+#Se vuelve factor el patron de oro
+Datos$DX<-factor(Datos$DX)
+enfermos <- Datos[Datos$DX == "1", ]
+noenfermos <- Datos[Datos$DX == "0", ]
+ 
+
+
+##AJUSTE DE DISTRIBUCIONES----
+
+###LEUCOCITOS----
+fit.cont(Datos$p9_Leuco)  #lognormal
+fw<-fitdist(Datos$p9_Leuco, "lnorm")
+summary(fw)
+fg<-fitdist(Datos$p9_Leuco, "gamma")
+summary(fg)
+fwe<-fitdist(Datos$p9_Leuco, "weibull")
+summary(fwe)
+flo<-fitdist(Datos$p9_Leuco, "logis")
+summary(flo)
+fln<-fitdist(Datos$p9_Leuco, "norm")
+summary(fln)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(fw), legendtext=plot.legend)
+qqcomp(list(fw), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma","Weibull","Logistica","Normal")
+denscomp(list(fw,fg,fwe,flo,fln), legendtext=plot.legend)
+qqcomp(list(fw,fg,fwe,flo,fln), legendtext=plot.legend)
+cdfcomp(list(fw,fg,fwe,flo,fln), legendtext=plot.legend)
+ppcomp(list(fw,fg,fwe,flo,fln), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para log-normal
+resultado_ad_test_lognormal <- goftest::ad.test(Datos$p9_Leuco, "plnorm", meanlog = fw$estimate["meanlog"], sdlog = fw$estimate["sdlog"])
+
+###prueba anderson darling para gamma
+resultado_ad_test_gamma <- goftest::ad.test(Datos$p9_Leuco, "pgamma", shape = fg$estimate["shape"], scale = 1/fg$estimate["rate"])
+
+###prueba anderson darling para weibull
+resultado_ad_test_weibull <- goftest::ad.test(Datos$p9_Leuco, "pweibull", shape = fwe$estimate["shape"], scale = fwe$estimate["scale"])
+
+###prueba anderson darling para logistica
+resultado_ad_test_logistica <- goftest::ad.test(Datos$p9_Leuco, "plogis", location = flo$estimate["location"], scale = flo$estimate["scale"])
+
+###prueba anderson darling para cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(Datos$p9_Leuco, "pcauchy", location = fca$estimate["location"], scale = fca$estimate["scale"])
+
+#prueba anderson darling para normal, 
+resultado_ad_test_normal <- goftest::ad.test(Datos$p9_Leuco, "pnorm", mean = fln$estimate["mean"], sd = fln$estimate["sd"])
+
+####LEUCOCITOS NO ENFERMOS----
+fit.cont(noenfermos$p9_Leuco) #lognormal
+
+ln<-fitdist(noenfermos$p9_Leuco, "lnorm")
+summary(ln)
+lm<-fitdist(noenfermos$p9_Leuco, "gamma")
+lwe<-fitdist(noenfermos$p9_Leuco, "weibull")
+llos<-fitdist(noenfermos$p9_Leuco, "logis")
+lñ<-fitdist(noenfermos$p9_Leuco, "norm")
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(ln), legendtext=plot.legend)
+qqcomp(list(ln), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma","Weibull","Logistica","Normal")
+denscomp(list(ln,lm,lwe,llos,lñ), legendtext=plot.legend)
+qqcomp(list(ln,lm,lwe,llos,lñ),legendtext=plot.legend)
+cdfcomp(list(ln,lm,lwe,llos,lñ),legendtext=plot.legend)
+ppcomp(list(ln,lm,lwe,llos,lñ),legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para log-normal
+resultado_ad_test_lognormal <- goftest::ad.test(noenfermos$p9_Leuco, "plnorm", meanlog = ln$estimate["meanlog"], sdlog = ln$estimate["sdlog"])
+###prueba anderson darling para gamma
+resultado_ad_test_gamma <- goftest::ad.test(noenfermos$p9_Leuco, "pgamma", shape = lm$estimate["shape"], scale = 1/lm$estimate["rate"])
+###prueba anderson darling para weibull
+resultado_ad_test_weibull <- goftest::ad.test(noenfermos$p9_Leuco, "pweibull", shape = lwe$estimate["shape"], scale = lwe$estimate["scale"])
+###prueba anderson darling para logistica
+resultado_ad_test_logistica <- goftest::ad.test(noenfermos$p9_Leuco, "plogis", location = llos$estimate["location"], scale = llos$estimate["scale"])
+###prueba anderson darling para cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(noenfermos$p9_Leuco, "pcauchy", location = lca$estimate["location"], scale = lca$estimate["scale"])
+###prueba anderson darling para normal, 
+resultado_ad_test_normal <- goftest::ad.test(noenfermos$p9_Leuco, "pnorm", mean = lñ$estimate["mean"], sd = lñ$estimate["sd"])
+
+
+
+### Graficos enfermos y no enfermos
+
+x11()
+par(mfrow=c(2,2), oma=c(2,1,2,1)) # oma ajusta los márgenes exteriores para el título
+
+# Para Leucocitos individuos enfermos
+plot.legend <- c("Lognormal")
+denscomp(list(fw), legendtext = plot.legend, main = "Histograma y densidades teóricas")
+qqcomp(list(fw), legendtext = plot.legend, main = "QQ-Plot")
+
+# Para Leucocitos individuos no enfermos
+plot.legend <- c("Lognormal")
+denscomp(list(ln), legendtext = plot.legend, main = "Histograma y densidades teóricas")
+qqcomp(list(ln), legendtext = plot.legend, main = "QQ-Plot")
+
+# Añadir títulos generales a las filas
+mtext("Leucocitos individuos enfermos", side=3, line=-1, at=0.5, cex=1.3, outer=TRUE)
+mtext("Leucocitos individuos no enfermos", side=1, line=-18, at=0.5, cex=1.3, outer=TRUE)
+
+
+
+###PLAQUETAS----
+fit.cont(Datos$p10_Plaquetas) #logistico
+
+pn<-fitdist(Datos$p10_Plaquetas, "logis")
+summary(pn)
+pñ<-fitdist(Datos$p10_Plaquetas, "norm")
+summary(pñ)
+pwe = fitdist(Datos$p10_Plaquetas, "weibull")
+summary(pwe)
+pga = fitdist(Datos$p10_Plaquetas, "gamma")
+summary(pga)
+plog = fitdist(Datos$p10_Plaquetas, "lnorm")
+summary(plog)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Logisica")
+denscomp(list(pn), legendtext=plot.legend)
+qqcomp(list(pn), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Logistic","Normal","Weibull","Gamma","LogNormal")
+denscomp(list(pn,pñ,pwe,pga,plog), legendtext=plot.legend)
+qqcomp(list(pn,pñ,pwe,pga,plog), legendtext=plot.legend)
+cdfcomp(list(pn,pñ,pwe,pga,plog), legendtext=plot.legend)
+ppcomp(list(pn,pñ,pwe,pga,plog), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para logistic
+resultado_ad_test_logistico <- goftest::ad.test(Datos$p10_Plaquetas, "plogis", location = pn$estimate["location"], scale = pn$estimate["scale"])
+#prueba anderson darling para normal
+resultado_ad_test_normal <- goftest::ad.test(Datos$p10_Plaquetas, "pnorm", mean = pñ$estimate["mean"], sd = pñ$estimate["sd"])
+#prueba anderson darling para weibull
+resultado_ad_test_weibull <- goftest::ad.test(Datos$p10_Plaquetas, "pweibull", shape = pwe$estimate["shape"], scale = pwe$estimate["scale"])
+#prueba anderson darling para gamma
+resultado_ad_test_gamma <- goftest::ad.test(Datos$p10_Plaquetas, "pgamma", shape = pga$estimate["shape"], scale = 1/ pga$estimate["rate"])
+#prueba anderson darling para cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(Datos$p10_Plaquetas, "pcauchy", location = pm$estimate["location"], scale = pm$estimate["scale"])
+#prueba anderson darling para lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(Datos$p10_Plaquetas, "plnorm", meanlog = plog$estimate["meanlog"], sd = plog$estimate["sdlog"])
+
+
+####PLAQUETAS NO ENFERMOS----
+fit.cont(noenfermos$p10_Plaquetas) 
+
+qga = fitdist(noenfermos$p10_Plaquetas, "gamma")
+summary(qga)
+qn<-fitdist(noenfermos$p10_Plaquetas, "logis")
+summary(qn)
+qlog = fitdist(noenfermos$p10_Plaquetas, "lnorm")
+summary(qlog)
+qñ<-fitdist(noenfermos$p10_Plaquetas, "norm")
+summary(qñ)
+qwe = fitdist(noenfermos$p10_Plaquetas, "weibull")
+summary(qwe)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Logisica")
+denscomp(list(qn), legendtext=plot.legend)
+qqcomp(list(qn), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Gamma","Logistic","LogNormal","Normal","Weibull")
+denscomp(list(qga,qn,qlog,qñ,qwe), legendtext=plot.legend)
+qqcomp(list(qga,qn,qlog,qñ,qwe), legendtext=plot.legend)
+cdfcomp(list(qga,qn,qlog,qñ,qwe), legendtext=plot.legend)
+ppcomp(list(qga,qn,qlog,qñ,qwe), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para gamma
+resultado_ad_test_gamma <- goftest::ad.test(noenfermos$p10_Plaquetas, "pgamma", shape = qga$estimate["shape"], scale = 1/ qga$estimate["rate"])
+#prueba anderson darling para logistic
+resultado_ad_test_logistico <- goftest::ad.test(noenfermos$p10_Plaquetas, "plogis", location = qn$estimate["location"], scale = qn$estimate["scale"])
+#prueba anderson darling para lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(noenfermos$p10_Plaquetas, "plnorm", meanlog = qlog$estimate["meanlog"], sd = qlog$estimate["sdlog"])
+#prueba anderson darling para normal
+resultado_ad_test_normal <- goftest::ad.test(noenfermos$p10_Plaquetas, "pnorm", mean = qñ$estimate["mean"], sd = qñ$estimate["sd"])
+#prueba anderson darling para weibull
+resultado_ad_test_weibull <- goftest::ad.test(noenfermos$p10_Plaquetas, "pweibull", shape = qwe$estimate["shape"], scale = qwe$estimate["scale"])
+#prueba anderson darling para cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(noenfermos$p10_Plaquetas, "pcauchy", location = qm$estimate["location"], scale = qm$estimate["scale"])
+
+
+
+### Graficos enfermos y no enfermos
+
+x11()
+par(mfrow=c(2,2), oma=c(2,1,2,1)) # oma ajusta los márgenes exteriores para el título
+
+# Para Leucocitos individuos enfermos
+plot.legend<-c("Logisica")
+denscomp(list(pn), legendtext=plot.legend, main = "Histograma y densidades teóricas")
+qqcomp(list(pn), legendtext=plot.legend, main = "QQ-Plot")
+# Para Leucocitos individuos no enfermos
+plot.legend<-c("Logisica")
+denscomp(list(qn), legendtext=plot.legend, main = "Histograma y densidades teóricas")
+qqcomp(list(qn), legendtext=plot.legend, main = "QQ-Plot")
+# Añadir títulos generales a las filas
+mtext("Plaquetas individuos enfermos", side=3, line=-1, at=0.5, cex=1.3, outer=TRUE)
+mtext("Plaquetas individuos no enfermos", side=1, line=-18, at=0.5, cex=1.3, outer=TRUE)
+
+
+
+
+
+###MONOCITOS----
+fit.cont(Datos$nmono)
+
+#weibull
+mwe<-fitdist(Datos$nmono, "weibull")
+summary(mwe)
+mga<-fitdist(Datos$nmono, "gamma")
+summary(mga)
+mlogis<-fitdist(Datos$nmono, "logis")
+summary(mlogis)
+mca<-fitdist(Datos$nmono, "cauchy")
+summary(mca)
+mnor<-fitdist(Datos$nmono, "norm")
+summary(mnor)
+mlog<-fitdist(Datos$nmono, "lnorm")
+summary(mlog)
+
+x11()
+plot(mlogis)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Weibull","Gamma","Logistica","Cauchy","Normal","LogNormal")
+denscomp(list(mwe,mga,mlogis,mca,mnor,mlog), legendtext=plot.legend)
+qqcomp(list(mwe,mga,mlogis,mca,mnor,mlog), legendtext=plot.legend)
+cdfcomp(list(mwe,mga,mlogis,mca,mnor,mlog), legendtext=plot.legend)
+ppcomp(list(mwe,mga,mlogis,mca,mnor,mlog), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(Datos$nmono, "pweibull", shape = mwe$estimate["shape"], scale = mwe$estimate["scale"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(Datos$nmono, "pgamma", shape = mga$estimate["shape"], scale = 1/mga$estimate["rate"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(Datos$nmono, "plogis", location = mlogis$estimate["location"], scale = mlogis$estimate["scale"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(Datos$nmono, "pcauchy", location = mca$estimate["location"], scale = mca$estimate["scale"])
+#prueba anderson darling para Normal
+resultado_ad_test_normal <- goftest::ad.test(Datos$nmono, "pnorm", mean = mnor$estimate["mean"], sd = mnor$estimate["sd"])
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(Datos$nmono, "plnorm", meanlog = mlog$estimate["meanlog"], sd = mlog$estimate["sdlog"])
+
+
+
+
+####miramos la levy
+log_likelihood <- function(params, data) {
+  mean <- params[1]
+  sd <- params[2]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+   # Calcula la verosimilitud
+  likelihood = -sum(log(dlevy(data,mean,sd)))
+  return(likelihood)  # Devuelve la verosimilitud
+}
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(mean = 0,sd = 1)  # Valores iniciales de los parámetros
+upper_bounds <- c(mean = min(Datos$nmono)-0.9, sd = Inf)
+fitnmono <- optim(initial_params, log_likelihood, data = Datos$nmono, method = "L-BFGS-B", upper=upper_bounds)
+fitnmono$par  # Parámetros estimados
+rlevy(324,-0.01908174,0.47787008)
+summary(rlevy(324,-0.01908174,0.47787008))
+#anderson darling
+goftest::ad.test(Datos$nmono, "plevy", m = -0.01908174, s = 0.47787008)
+#histograma
+x11()
+hist(Datos$nmono,freq=F,ylim = c(0,1.2))
+# Ajustar la ojiva de una distribución de Levy
+x <- seq(0, 15, length.out = 1000)
+y = dlevy(x, m = -0.01908174, s = 0.47787008)
+lines(x, y, type = "l", col = "red", lwd = 2)
+legend("topright", legend = "Levy Distribution", col = "red", lty = 1, lwd = 2)
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(Datos$nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlevy(seq(0, 1, length.out = n),m = -0.01908174,s=0.47787008)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para levy", xlab = "Cuantiles de la distribución levy",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(Datos$nmono)
+llf <- sum(dlevy(Datos$nmono, m = -0.01908174,s=0.47787008))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+###miramos la pareto
+log_likelihood <- function(params, data) {
+  shape <- params[1]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+  # Calcula la verosimilitud
+  likelihood = -sum(log(sads::dpareto(data,shape,scale = min(data))))
+  return(likelihood)  # Devuelve la verosimilitud
+}
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(shape = 1)  # Valores iniciales de los parámetros
+lower_bounds <- c(shape = 0.1)
+fitrazonln <- optim(initial_params, log_likelihood, data = Datos$nmono, method = "L-BFGS-B", lower=lower_bounds)
+fitrazonln$par  # Parámetros estimados
+rpareto(324,0.01,0.2418451)
+summary(rpareto(324,0.01,0.2418451))
+
+#optimizacion por funcion 
+EnvStats::epareto(Datos$nmono, method = "mle")
+
+#anderson darling
+goftest::ad.test(Datos$nmono, EnvStats::ppareto, location = 0.0100000, shape =0.2418451)
+#histograma
+x11()
+hist(Datos$nmono,freq=F,ylim = c(0,15))
+# Ajustar la ojiva de una distribución de Levy
+x <- seq(0, 15, length.out = 1000)
+y = EnvStats::dpareto(x, location=min(Datos$nmono), shape =0.2418451)
+lines(x, y, type = "l", col = "red", lwd = 2)
+legend("topright", legend = "pareto Distribution", col = "red", lty = 1, lwd = 2)
+
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(Datos$nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- EnvStats::qpareto(seq(0, 1, length.out = n),location=min(Datos$nmono), shape =0.2418451)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para levy", xlab = "Cuantiles de la distribución levy",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(Datos$nmono)
+llf <- sum(EnvStats::dpareto(Datos$nmono, location=min(Datos$nmono), shape =0.2418451))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+
+##########quitando los puntoss atipicos
+which.max(Datos$nmono)
+nmono = Datos$nmono[-c(190,106)]
+fit.cont(nmono)
+nmonofit<-fitdist(nmono, "logis")
+goftest::ad.test(nmono, "plogis", location = nmonofit$estimate["location"], scale = nmonofit$estimate["scale"])
+
+###miramos la levy
+log_likelihood <- function(params, data) {
+  mean <- params[1]
+  sd <- params[2]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+  # Calcula la verosimilitud
+  likelihood = -sum(log(dlevy(data,mean,sd)))
+  return(likelihood)  # Devuelve la verosimilitud
+}
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(mean = 0,sd = 1)  # Valores iniciales de los parámetros
+upper_bounds <- c(mean = min(nmono)-0.0009, sd = Inf)
+fitnmono2 <- optim(initial_params, log_likelihood, data = nmono, method = "L-BFGS-B", upper=upper_bounds)
+fitnmono2$par  # Parámetros estimados
+rlevy(324,-0.01889886,0.47482718)
+summary(rlevy(324,-0.01889886,0.47482718))
+#anderson darling
+goftest::ad.test(nmono, "plevy", m = -0.01889886, s = 0.47482718 )
+#histograma
+x11()
+hist(nmono,freq=F,ylim = c(0,1.2))
+# Ajustar la ojiva de una distribución de Levy
+x <- seq(0, 15, length.out = 1000)
+y = dlevy(x, m = -0.01889886, s = 0.47482718)
+lines(x, y, type = "l", col = "red", lwd = 2)
+legend("topright", legend = "Levy Distribution", col = "red", lty = 1, lwd = 2)
+
+
+#qqplot
+cuantiles_datos <- quantile(nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlevy(seq(0, 1, length.out = n),m = -0.01889886, s = 0.47482718)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para levy", xlab = "Cuantiles de la distribución levy",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+
+
+
+# Calcular AIC y BIC
+n <- length(nmono)
+llf <- sum(dlevy(nmono, m = -0.01908174,s=0.47787008))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+###Miramor la pareto
+log_likelihood <- function(params, data) {
+  shape <- params[1]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+  # Calcula la verosimilitud
+  likelihood = -sum(log(sads::dpareto(data,shape,scale = min(data))))
+  return(likelihood)  # Devuelve la verosimilitud
+}
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(shape = 1)  # Valores iniciales de los parámetros
+lower_bounds <- c(shape = 0.1)
+fitnm <- optim(initial_params, log_likelihood, data = nmono, method = "L-BFGS-B", lower=lower_bounds)
+fitnm$par  # Parámetros estimados
+#optimizacion por funcion 
+EnvStats::epareto(nmono, method = "mle")
+
+#anderson darling
+goftest::ad.test(nmono, EnvStats::ppareto, location = min(nmono), shape =0.2418451)
+#histograma
+x11()
+hist(nmono,freq=F,ylim = c(0,15))
+# Ajustar la ojiva de una distribución de Levy
+x <- seq(0, 15, length.out = 1000)
+y = EnvStats::dpareto(x, location = min(nmono), shape =0.2418451)
+lines(x, y, type = "l", col = "red", lwd = 2)
+legend("topright", legend = "pareto Distribution", col = "red", lty = 1, lwd = 2)
+
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- EnvStats::qpareto(seq(0, 1, length.out = n),location = min(nmono), shape =0.2418451)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para levy", xlab = "Cuantiles de la distribución levy",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(nmono)
+llf <- sum(EnvStats::dpareto(nmono, location = min(nmono), shape =0.2418451))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+####MONOCITOS NO ENFERMOS----
+fit.cont(noenfermos$nmono)
+
+ñga<-fitdist(noenfermos$nmono, "gamma")
+summary(ñga)
+ñwe<-fitdist(noenfermos$nmono, "weibull")
+summary(ñwe)
+ñlogis<-fitdist(noenfermos$nmono, "logis")
+summary(ñlogis)
+ñca<-fitdist(noenfermos$nmono, "cauchy")
+summary(ñca)
+ñnor<-fitdist(noenfermos$nmono, "norm")
+summary(ñnor)
+ñlog<-fitdist(noenfermos$nmono, "lnorm")
+summary(ñlog)
+
+x11()
+plot(ñlogis)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Weibull","Gamma","Logistica","Cauchy","Normal","LogNormal")
+denscomp(list(ñwe,ñga,ñlogis,ñca,ñnor,ñlog), legendtext=plot.legend)
+qqcomp(list(ñwe,ñga,ñlogis,ñca,ñnor,ñlog), legendtext=plot.legend)
+cdfcomp(list(ñwe,ñga,ñlogis,ñca,ñnor,ñlog), legendtext=plot.legend)
+ppcomp(list(ñwe,ñga,ñlogis,ñca,ñnor,ñlog), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(noenfermos$nmono, "pgamma", shape = ñga$estimate["shape"], scale = 1/ñga$estimate["rate"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(noenfermos$nmono, "pweibull", shape = ñwe$estimate["shape"], scale = ñwe$estimate["scale"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(noenfermos$nmono, "plogis", location = ñlogis$estimate["location"], scale = ñlogis$estimate["scale"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(noenfermos$nmono, "pcauchy", location = ñca$estimate["location"], scale = ñca$estimate["scale"])
+#prueba anderson darling para Normal
+resultado_ad_test_normal <- goftest::ad.test(noenfermos$nmono, "pnorm", mean = ñnor$estimate["mean"], sd = ñnor$estimate["sd"])
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(noenfermos$nmono, "plnorm", meanlog = ñlog$estimate["meanlog"], sd = ñlog$estimate["sdlog"])
+
+
+####miramos la levy
+log_likelihood <- function(params, data) {
+  mean <- params[1]
+  sd <- params[2]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+  # Calcula la verosimilitud
+  likelihood = -sum(log(dlevy(data,mean,sd)))
+  return(likelihood)  # Devuelve la verosimilitud
+}
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(mean = 0,sd = 1)  # Valores iniciales de los parámetros
+upper_bounds <- c(mean = min(noenfermos$nmono)-0.9, sd = Inf)
+fitnmono <- optim(initial_params, log_likelihood, data = Datos$nmono, method = "L-BFGS-B", upper=upper_bounds)
+fitnmono$par  # Parámetros estimados
+rlevy(324,-0.01908174,0.47787008)
+summary(rlevy(324,-0.01908174,0.47787008))
+
+
+
+###HEMATOCRITO/HEMOGLOBINA----
+fit.cont(Datos$hematocrito_hemoglobina)
+
+#lognormal
+hlog<-fitdist(Datos$hematocrito_hemoglobina, "lnorm")
+summary(hlog)
+hga<-fitdist(Datos$hematocrito_hemoglobina, "gamma")
+summary(hga)
+hlogis<-fitdist(Datos$hematocrito_hemoglobina, "logis")
+summary(hlogis)
+hnor<-fitdist(Datos$hematocrito_hemoglobina, "norm")
+summary(hnor)
+hwe<-fitdist(Datos$hematocrito_hemoglobina, "weibull")
+summary(hwe)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(hlog), legendtext=plot.legend)
+qqcomp(list(hlog), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("LogNormal","Gamma","Logistica","Normal","Weibull")
+denscomp(list(hlog,hga,hlogis,hnor,hwe), legendtext=plot.legend)
+qqcomp(list(hlog,hga,hlogis,hnor,hwe), legendtext=plot.legend)
+cdfcomp(list(hlog,hga,hlogis,hnor,hwe), legendtext=plot.legend)
+ppcomp(list(hlog,hga,hlogis,hnor,hwe), legendtext=plot.legend)
+
+
+########pruebas de bondad 
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(Datos$hematocrito_hemoglobina, "plnorm", meanlog = hlog$estimate["meanlog"], sd = hlog$estimate["sdlog"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(Datos$hematocrito_hemoglobina, "pgamma", shape = hga$estimate["shape"], scale = 1/hga$estimate["rate"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(Datos$hematocrito_hemoglobina, "plogis", location = hlogis$estimate["location"], scale = hlogis$estimate["scale"])
+#prueba anderson darling para Normal
+resultado_ad_test_normal <- goftest::ad.test(Datos$hematocrito_hemoglobina, "pnorm", mean = hnor$estimate["mean"], sd = hnor$estimate["sd"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(Datos$hematocrito_hemoglobina, "pweibull", shape = hwe$estimate["shape"], scale = hwe$estimate["scale"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(Datos$hematocrito_hemoglobina, "pcauchy", location = hca$estimate["location"], scale = hca$estimate["scale"])
+
+
+####HEMATOCRITO/HEMOGLOBINA NO ENFERMOS----
+fit.cont(noenfermos$hematocrito_hemoglobina)
+
+#lognormal
+elog<-fitdist(noenfermos$hematocrito_hemoglobina, "lnorm")
+summary(elog)
+ega<-fitdist(noenfermos$hematocrito_hemoglobina, "gamma")
+summary(ega)
+elogis<-fitdist(noenfermos$hematocrito_hemoglobina, "logis")
+summary(elogis)
+enor<-fitdist(noenfermos$hematocrito_hemoglobina, "norm")
+summary(enor)
+ewe<-fitdist(noenfermos$hematocrito_hemoglobina, "weibull")
+summary(ewe)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(elog), legendtext=plot.legend)
+qqcomp(list(elog), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("LogNormal","Gamma","Logistica","Normal","Weibull")
+denscomp(list(elog,ega,elogis,enor,ewe), legendtext=plot.legend)
+qqcomp(list(elog,ega,elogis,enor,ewe), legendtext=plot.legend)
+cdfcomp(list(elog,ega,elogis,enor,ewe), legendtext=plot.legend)
+ppcomp(list(elog,ega,elogis,enor,ewe), legendtext=plot.legend)
+
+
+########pruebas de bondad 
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "plnorm", meanlog = elog$estimate["meanlog"], sd = elog$estimate["sdlog"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "pgamma", shape = ega$estimate["shape"], scale = 1/ega$estimate["rate"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "plogis", location = elogis$estimate["location"], scale = elogis$estimate["scale"])
+#prueba anderson darling para Normal
+resultado_ad_test_normal <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "pnorm", mean = enor$estimate["mean"], sd = enor$estimate["sd"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "pweibull", shape = ewe$estimate["shape"], scale = ewe$estimate["scale"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(noenfermos$hematocrito_hemoglobina, "pcauchy", location = eca$estimate["location"], scale = eca$estimate["scale"])
+
+
+
+#graficos enfermos no enfermos
+x11()
+par(mfrow=c(2,2), oma=c(2,1,2,1))
+plot.legend<-c("Lognormal")
+denscomp(list(hlog), legendtext=plot.legend,main ="Histograma y densidades teoricas")
+qqcomp(list(hlog), legendtext=plot.legend,main = "QQ-Plot")
+
+plot.legend<-c("Lognormal")
+denscomp(list(elog), legendtext=plot.legend,main ="Histograma y densidades teoricas")
+qqcomp(list(elog), legendtext=plot.legend, main = "QQ-Plot")
+
+# Añadir títulos generales a las filas
+mtext("Hematocrito / Hemoglobina individuos enfermos", side=3, line=-1, at=0.5, cex=1.3, outer=TRUE)
+mtext("Hematocrito / Hemoglobina individuos no enfermos", side=1, line=-18, at=0.5, cex=1.3, outer=TRUE)
+
+
+
+
+### LINFOCITOS/NEUTROFILOS ---- 
+########### tomando en cuenta el valor atipico
+
+fit.cont(Datos$linfocitos_neutrofilos)
+slog<-fitdist(Datos$linfocitos_neutrofilos, "lnorm")
+summary(slog)
+#lognormal, cauchy, gamma, weibull, exponencial, levy, logistica 
+sca<-fitdist(Datos$linfocitos_neutrofilos, "cauchy")
+summary(sca)
+sga<-fitdist(Datos$linfocitos_neutrofilos, "gamma")
+summary(sga)
+swe<-fitdist(Datos$linfocitos_neutrofilos, "weibull")
+summary(swe)
+sex<-fitdist(Datos$linfocitos_neutrofilos, "exp")
+summary(sex)
+slogis<-fitdist(Datos$linfocitos_neutrofilos, "logis")
+summary(slogis)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(slog), legendtext=plot.legend)
+qqcomp(list(slog), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Cauchy","Gamma","Weibull", "Exponencial","Logistica")
+denscomp(list(slog,sca,sga,swe,sex,slogis), legendtext=plot.legend)
+qqcomp(list(slog,sca,sga,swe,sex,slogis), legendtext=plot.legend)
+cdfcomp(list(slog,sca,sga,swe,sex,slogis), legendtext=plot.legend)
+ppcomp(list(slog,sca,sga,swe,sex,slogis), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(Datos$linfocitos_neutrofilos, "plnorm", meanlog = slog$estimate["meanlog"], sd = slog$estimate["sdlog"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(Datos$linfocitos_neutrofilos, "pcauchy", location = sca$estimate["location"], scale = sca$estimate["scale"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(Datos$linfocitos_neutrofilos, "pgamma", shape = sga$estimate["shape"], scale = 1/sga$estimate["rate"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(Datos$linfocitos_neutrofilos, "pweibull", shape = swe$estimate["shape"], scale = swe$estimate["scale"])
+#prueba anderson darling para Exponencial
+resultado_ad_test_exponencial <- goftest::ad.test(Datos$linfocitos_neutrofilos, "pexp", rate = sex$estimate["rate"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(Datos$linfocitos_neutrofilos, "plogis", location = slogis$estimate["location"], scale = slogis$estimate["scale"])
+
+
+###### Distribución levy 
+log_likelihood <- function(params, data) {
+  mean <- params[1]
+  sd <- params[2]
+  #if(sd <= 0) return(Inf)
+  n <- length(data)
+  
+  # Calcula la verosimilitud
+  #likelihood <- -((n/2)*(log(sd) - log(2*pi))) - ((3/2)*sum(log(data - mean))) - ((1/2)*sum(sd/(data - mean)))
+  likelihood = -sum(log(dlevy(data,mean,sd)))
+  
+  return(likelihood)  # Devuelve la verosimilitud
+}
+
+
+# Estimar los parámetros de máxima verosimilitud utilizando optim
+initial_params <- c(mean = 0,sd = 1)  # Valores iniciales de los parámetros
+upper_bounds <- c(mean = min(Datos$linfocitos_neutrofilos)-0.1, sd = Inf)
+fit <- optim(initial_params, log_likelihood, data = Datos$linfocitos_neutrofilos, method = "L-BFGS-B", upper=upper_bounds)
+
+fit$par  # Parámetros estimados
+
+#anderson darling
+resultado_ad_test_lognormal1 <- goftest::ad.test(Datos$linfocitos_neutrofilos, "plevy", m = -0.06056338, s = 0.34897055)
+
+# Calcular AIC y BIC
+n <- length(Datos$linfocitos_neutrofilos)
+llf <- sum(dlevy(Datos$linfocitos_neutrofilos, m = -0.06056338, s=  0.34897055, log = TRUE))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+x11()
+hist(Datos$linfocitos_neutrofilos,freq=F,ylim = c(0,2))
+# Ajustar la ojiva de una distribución de Levy
+x <- seq(0, 15, length.out = 1000)
+y = dlevy(x, m = -0.06056338, s = 0.34897055)
+lines(x, y, type = "l", col = "red", lwd = 2)
+legend("topright", legend = "Levy Distribution", col = "red", lty = 1, lwd = 2)
+
+
+
+# Generar una muestra aleatoria de una distribución Levy
+# Crear el Q-Q plot
+qqplot(y, Datos$linfocitos_neutrofilos, main = "Q-Q Plot: Levy vs. Datos Observados", xlab = "Cuantiles de la distribución Levy", ylab = "Cuantiles de los datos observados")
+abline(0, 1, col = "red")  # Línea de referencia
+
+
+
+
+########### eliminando el punto atipico
+
+which.max(Datos$linfocitos_neutrofilos)
+linfocitosneutrofilos = Datos$linfocitos_neutrofilos[-299]
+fit.cont(linfocitosneutrofilos)
+
+zlog<-fitdist(linfocitosneutrofilos, "lnorm")
+summary(zlog)
+zga<-fitdist(linfocitosneutrofilos, "gamma")
+summary(zga)
+zwe<-fitdist(linfocitosneutrofilos, "weibull")
+summary(zwe)
+zex<-fitdist(linfocitosneutrofilos, "exp")
+summary(zex)
+zca<-fitdist(linfocitosneutrofilos, "cauchy")
+summary(zca)
+zlogis<-fitdist(linfocitosneutrofilos, "logis")
+summary(zlogis)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma")
+denscomp(list(zlog,zga), legendtext=plot.legend)
+qqcomp(list(zlog,zga), legendtext=plot.legend)
+cdfcomp(list(zlog,zga), legendtext=plot.legend)
+ppcomp(list(zlog,zga), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma","Weibull", "Exponencial","Cauchy","Logistica")
+denscomp(list(zlog,zga,zwe,zex,zca,zlogis), legendtext=plot.legend)
+qqcomp(list(zlog,zga,zwe,zex,zca,zlogis), legendtext=plot.legend)
+cdfcomp(list(zlog,zga,zwe,zex,zca,zlogis), legendtext=plot.legend)
+ppcomp(list(zlog,zga,zwe,zex,zca,zlogis), legendtext=plot.legend)
+
+########pruebas de bondad 
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(linfocitosneutrofilos, "plnorm", meanlog = zlog$estimate["meanlog"], sd = zlog$estimate["sdlog"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(linfocitosneutrofilos, "pgamma", shape = zga$estimate["shape"], scale = 1/zga$estimate["rate"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(linfocitosneutrofilos, "pweibull", shape = zwe$estimate["shape"], scale = zwe$estimate["scale"])
+#prueba anderson darling para Exponencial
+resultado_ad_test_exponencial <- goftest::ad.test(linfocitosneutrofilos, "pexp", rate = zex$estimate["rate"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(linfocitosneutrofilos, "pcauchy", location = zca$estimate["location"], scale = zca$estimate["scale"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(linfocitosneutrofilos, "plogis", location = zlogis$estimate["location"], scale = zlogis$estimate["scale"])
+
+
+
+#### LINFOCITOS/NEUTROFILOS NO ENFERMOS ---- 
+fit.cont(noenfermos$linfocitos_neutrofilos)
+
+#Lognormal
+xlog<-fitdist(noenfermos$linfocitos_neutrofilos, "lnorm")
+summary(xlog)
+xga<-fitdist(noenfermos$linfocitos_neutrofilos, "gamma")
+summary(xga)
+xwe<-fitdist(noenfermos$linfocitos_neutrofilos, "weibull")
+summary(xwe)
+xex<-fitdist(noenfermos$linfocitos_neutrofilos, "exp")
+summary(xex)
+xca<-fitdist(noenfermos$linfocitos_neutrofilos, "cauchy")
+summary(xca)
+xlogis<-fitdist(noenfermos$linfocitos_neutrofilos, "logis")
+summary(xlogis)
+
+x11()
+par(mfrow=c(1,2))
+plot.legend<-c("Lognormal")
+denscomp(list(xlog), legendtext=plot.legend)
+qqcomp(list(xlog), legendtext=plot.legend)
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma")
+denscomp(list(xlog,xga), legendtext=plot.legend)
+qqcomp(list(xlog,xga), legendtext=plot.legend)
+cdfcomp(list(xlog,xga), legendtext=plot.legend)
+ppcomp(list(xlog,xga), legendtext=plot.legend)
+
+
+x11()
+par(mfrow=c(2,2))
+plot.legend<-c("Lognormal","Gamma","Weibull", "Exponencial","Cauchy","Logistica")
+denscomp(list(xlog,xga,xwe,xex,xca,xlogis), legendtext=plot.legend)
+qqcomp(list(xlog,xga,xwe,xex,xca,xlogis), legendtext=plot.legend)
+cdfcomp(list(xlog,xga,xwe,xex,xca,xlogis), legendtext=plot.legend)
+ppcomp(list(xlog,xga,xwe,xex,xca,xlogis), legendtext=plot.legend)
+
+
+########pruebas de bondad 
+#prueba anderson darling para Lognormal
+resultado_ad_test_lognormal <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "plnorm", meanlog = xlog$estimate["meanlog"], sd = xlog$estimate["sdlog"])
+#prueba anderson darling para Gamma
+resultado_ad_test_gamma <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "pgamma", shape = xga$estimate["shape"], scale = 1/xga$estimate["rate"])
+#prueba anderson darling para Weibull
+resultado_ad_test_weibull <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "pweibull", shape = xwe$estimate["shape"], scale = xwe$estimate["scale"])
+#prueba anderson darling para Exponencial
+resultado_ad_test_exponencial <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "pexp", rate = xex$estimate["rate"])
+#prueba anderson darling para Cauchy
+resultado_ad_test_cauchy <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "pcauchy", location = xca$estimate["location"], scale = xca$estimate["scale"])
+#prueba anderson darling para Logistica
+resultado_ad_test_logistica <- goftest::ad.test(noenfermos$linfocitos_neutrofilos, "plogis", location = xlogis$estimate["location"], scale = xlogis$estimate["scale"])
+
+
+
+
+
+
+
+
+
+#graficos enfermos no enfermos
+x11()
+par(mfrow=c(2,2), oma=c(2,1,2,1))
+plot.legend<-"Lognormal"
+denscomp(list(slog), legendtext=plot.legend,main ="Histograma y densidades teoricas")
+qqcomp(list(slog), legendtext=plot.legend,main = "QQ-Plot")
+
+plot.legend<-"Lognormal"
+denscomp(list(xlog), legendtext=plot.legend,main ="Histograma y densidades teoricas")
+qqcomp(list(xlog), legend = plot.legend,main = "QQ-Plot")
+
+# Añadir títulos generales a las filas
+mtext("Linfocito / Neutrófilos individuos enfermos", side=3, line=-1, at=0.5, cex=1.3, outer=TRUE)
+mtext("Linfocito / Neutrófilos individuos no enfermos", side=1, line=-18, at=0.5, cex=1.3, outer=TRUE)
+
+
+
+
+
+
+

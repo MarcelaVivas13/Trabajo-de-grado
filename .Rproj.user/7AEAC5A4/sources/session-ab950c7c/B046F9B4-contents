@@ -1,0 +1,483 @@
+## se requieren para usar la funcion conv
+Root.skew<-function(skew,dist,tol=0.000001,maxiter=100){ 
+  
+  k=0
+  
+  if(dist=="lognorm"){
+    if(skew<=0){stop("for Lognormal distribution, skewness must be positive")}
+    
+    
+    f<-function(x,skew){
+      f1<-2*x+log(exp(x)+3)-log(skew^2+4)
+      fd<-2+exp(x)/(exp(x)+3)
+      return(c(f1,fd))
+    }
+    
+    xk=0.5
+    repeat{
+      p=f(xk,skew)
+      dx=p[1]/p[2]
+      xk1=xk-dx
+      xk=xk1
+      k=k+1
+      if (abs(dx)<=tol|k>=maxiter){break}
+    }
+    
+  }
+  
+  else if(dist=="weibull"){
+    
+    if(skew<(-1.1)){stop("for Weibull distribution, skewness must be upper than -1.1")}  
+    
+    f<-function(x,skew){
+      gam1=gamma(1+(1/x));gam2=gamma(1+(2/x));gam3=gamma(1+(3/x)) 
+      phi1=digamma(1+(1/x));phi2=digamma(1+(1/x));phi3=digamma(1+(1/x))
+      
+      f1<-(gam3-3*gam1*gam2+2*(gam1^3)-skew*((gam2-(gam1^2))^(3/2)))
+      fd<-(-3/(x^2))*(gam3*phi3-gam1*gam2*(phi1-2*phi2)+(gam1^3)*phi1-skew*(gam2*phi2-(gam1^2)*phi1)*sqrt(gam2-(gam1^2)))
+      return(c(f1,fd))
+    }  
+    
+    if((skew >=0.5)){a<-0.1;b<-2.3}
+    else if((skew<0.5)&(skew>=-0.5)){a<-2.0;b<-10}
+    else if((skew<(-0.5))&(skew>=(-1))){a<-8;b<-50}
+    else if((skew<(-1))&(skew>=(-1.1))){a<-40;b<-160}
+    
+    if(skew<(-1)){tol=0.0000000001}
+    repeat{
+      c<-(a+b)/2
+      fc<-f(c,skew)[1]
+      if(fc*f(b,skew)[1]>0){b<-c}else{a<-c}
+      k<-k+1
+      if (abs(fc)<tol|k>maxiter){break}
+    } 
+    xk=c
+  }
+  
+  if(dist=="lognorm"){xsal=sqrt(xk);names(xsal)="sigmalog"}
+  else if(dist=="weibull"){xsal=xk;names(xsal)="a"}
+  
+  return(c(xsal))
+}
+
+dlnorm3<-function(x,gamma,meanlog,sdlog){
+  x<-(x-gamma)
+  den<-dlnorm(x,meanlog,sdlog)
+  return(den)
+}
+
+plnorm3<-function(x,gamma,meanlog,sdlog){
+  x<-(x-gamma)
+  prob<-plnorm(x,meanlog,sdlog)
+  return(prob)
+}
+
+qlnorm3<-function(q,gamma,meanlog,sdlog){
+  xp<-gamma + qlnorm(q,meanlog,sdlog)
+  return(xp)
+}
+
+rlnorm3<-function(n,gamma,meanlog,sdlog){
+  s<-gamma+rlnorm(n,meanlog,sdlog)
+  return(s)
+}
+
+ref.weibull<-function(gamma,b,a){
+  gam1=gamma(1+(1/a));gam2=gamma(1+(2/a));gam3=gamma(1+(3/a))
+  mean<-gamma+b*gam1
+  sd<-b*sqrt(gam2-(gam1^2))
+  CA<-round(((gam3-3*gam1*gam2+2*(gam1^3))/((gam2-(gam1^2))^(3/2))) ,3)     
+  sol<-c(mean,sd,CA)
+  names(sol)<-c("mean","sd","CA")
+  return(sol)
+}
+
+ref.snorm<-function(xi,omega,lambda){
+  d=lambda/sqrt(1+lambda^2)
+  mean<-round(xi+omega*d*sqrt(2/pi),2)
+  sd<-round(omega*sqrt(1-2*(d^2)/pi),2)
+  CA<-round(((4-pi)/2)*(d*sqrt(2/pi)/sqrt(1-2*(d^2)/pi))^3,3)     
+  sol<-c(mean,sd,CA)
+  names(sol)<-c("mean","sd","CA")
+  return(sol)
+}
+
+ref.lognorm3<-function(gamma,mulog,siglog){
+  mean<-round(gamma+exp(mulog+0.5*(siglog^2)),2)
+  sd<-round(sqrt(exp(2*mulog+(siglog^2))*(exp(siglog^2)-1)),2)
+  CA<-round((exp(siglog^2)+2)*sqrt(abs(exp(siglog^2)-1)),3)
+  sol<-c(mean,sd,CA)
+  names(sol)<-c("mean","sd","CA")
+  return(sol)
+}
+
+# funcion que halla los parametros
+
+conv<-function(mu,sig,skew,dist,delta=0,r=1,q=0.02){ #mu y sig en escala original
+  
+  if (q<=0|q>=1) {stop("Parametros Inconsistentes")}
+  
+  if(dist=="norm"){
+    z=-qnorm(q/2)
+    qsd= pnorm((-z-delta)/r)
+    qld= 1-pnorm((z-delta)/r)
+    S=mu-z*sig
+    L=mu+z*sig
+  }
+  
+  else if(dist=="weibull"){
+    
+    a=Root.skew(skew,"weibull")
+    gam1=gamma(1+(1/a));gam2=gamma(1+(2/a));
+    b=sig/sqrt(gam2-(gam1^2))
+    gamma=mu-b*gam1
+    S=gamma+b*((-log(1-q/2))^(1/a))
+    L=gamma+b*((-log(q/2))^(1/a))
+    
+    
+    b1=r*b
+    gamma1=gamma+b*(gam1*(1-r)+delta*sqrt(gam2-(gam1^2)))
+    
+    fact=gam1*(1-r)+delta*sqrt(gam2-(gam1^2))
+    
+    qsd=pweibull(S-gamma1,a,b1)
+    qld=1-pweibull(L-gamma1,a,b1)
+    #qsd= 1-exp((-1/(r^a))*((-log(1-q/2))^(1/a)-fact)^a)
+    #qld=exp((-1/(r^a))*((-log(q/2))^(1/a)-fact)^a)
+  }
+  
+  
+  else if(dist=="lognorm2"){
+    mulog=log(mu/(sqrt(1+(sig^2)/(mu^2))))
+    siglog=sqrt(log(1+ (sig^2)/(mu^2)))
+    S=qlnorm(q/2, mulog, siglog)
+    L=qlnorm(1-q/2, mulog, siglog)
+    mu1=mu+delta*sig; sig1=r*sig
+    mulog1=log(mu1/(sqrt(1+(sig1^2)/(mu1^2))))
+    siglog1=sqrt(log(1+ (sig1^2)/(mu1^2)))
+    
+    qsd= plnorm(S, mulog1, siglog1)
+    qld= 1-plnorm(L, mulog1, siglog1)  
+    gamma=gamma1=0
+  }
+  else if (dist=="lognorm3"){
+    z=-qnorm(q/2)
+    siglog=Root.skew(skew,"lognorm")
+    mulog=log(sig/sqrt(exp(siglog^2)-1))-0.5*(siglog^2)
+    gamma=mu-sig/sqrt(exp(siglog^2)-1)
+    
+    siglog1=siglog
+    mulog1=log(r)+mulog
+    gamma1=gamma +exp(mulog+0.5*(siglog^2))*(1-r+delta*sqrt(exp(siglog^2)-1))
+    
+    S=gamma+exp(mulog-siglog*z)
+    L=gamma+exp(mulog+siglog*z)
+    #qsd= plnorm3(S,gamma1, mulog1, siglog1)
+    #qld= 1-plnorm3(L,gamma1, mulog1, siglog1)
+    
+    
+    qsd=pnorm(-z+(1/siglog)*log(max(0,(1/r)+exp(0.5*(siglog^2)+z*siglog)*((1-1/r)-delta*sqrt(exp(siglog^2)-1)/r))))
+    qld=1-pnorm(z+(1/siglog)*log(max(0,(1/r)+exp(0.5*(siglog^2)-z*siglog)*((1-1/r)-delta*sqrt(exp(siglog^2)-1)/r)))) # maximo para evitar que el log se indetermine con valores extremos de q
+  }
+  else if (dist=="snorm"){
+    d=sign(skew)*sqrt((pi/2)*(abs(skew)^(2/3))/(abs(skew)^(2/3) + ((4-pi)/2)^(2/3)))
+    lambda=d/sqrt(1-d^2)
+    zs=qsn(q/2,0,1,lambda)
+    zl=qsn(1-q/2,0,1,lambda)
+    omega=sig/sqrt(1-2*(d^2)/pi)
+    xi=mu-omega*d*sqrt(2/pi)
+    S=xi+zs*omega
+    L=xi+zl*omega
+    
+    qsd= psn((zs-sqrt(2/pi)*(d*(1-r)+delta*sqrt((pi/2)-d^2)))/r,0,1,lambda)
+    qld= 1-psn((zl-sqrt(2/pi)*(d*(1-r)+delta*sqrt((pi/2)-d^2)))/r,0,1,lambda)
+    
+    omega1=r*omega
+    xi1=xi+omega*sqrt(2/pi)*(d*(1-r)+delta*sqrt((pi/2)-d^2))
+  }
+  
+  else{stop("dist must be: norm, snorm, lognorm2, lognorm3, weibull")}
+  
+  if(dist=="norm"){sol<-c(qsd,qld,S,L)
+  names(sol)<-c("qsd","qld","S","L")}
+  else if(dist=="snorm"){sol<-c(qsd,qld,S,L,xi,omega,lambda,xi1,omega1,lambda)
+  names(sol)<-c("qsd","qld","S","L","xi","omega","lambda","xi1","omega1","lambda1")
+  }
+  else if(dist=="weibull"){sol<-c(qsd,qld,S,L,gamma,b,a,gamma1,b1,a)
+  names(sol)<-c("qsd","qld","S","L","gamma","b","a","gamma1","b1","a1")
+  }
+  else{ sol<-c(qsd,qld,S,L,gamma,mulog,siglog,gamma1,mulog1,siglog1)
+  names(sol)<-c("qsd","qld","S","L","gamma","mulog","siglog","gamma1","mulog1","siglog1")
+  }
+  return(sol)
+}
+conv(mu=mean(nmono),sig=sd(nmono),skewness(Datos$nmono),dist="weibull")
+
+
+
+####monocitos ----
+library(e1071)
+library(stats)
+library(gridExtra)
+library(goftest)
+## ejecutar y observar solo los parametros relacionados con la distribucion
+
+#lognormal de 3 parametros para toda la base de datos
+conv(mu=mean(Datos$nmono),sig=sd(Datos$nmono),skew=skewness(Datos$nmono),dist="lognorm3")
+
+x11()
+par(mfrow=c(1,2))
+hist(Datos$nmono,freq=F,ylim = c(0,1.4),breaks=10, 
+     main ="Histogram and theoretical densities",xlab = "data",col = "white")
+curve(dlnorm3(x, gamma = -0.01347245,meanlog = -0.40325803,sdlog =0.53709532), 
+      col = "red", lwd = 1, add = TRUE)
+
+ad.test(Datos$nmono,plnorm3,gamma = -0.01347245,meanlog = -0.40325803,sdlog =0.53709532)
+
+rlnorm3(324,-0.01347245,-0.40325803,0.53709532)
+summary(rlnorm3(324,-0.01347245,-0.40325803,0.53709532))
+summary(Datos$nmono)
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(Datos$nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma = -0.01347245,meanlog = -0.40325803,sdlog =0.53709532)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Q-Q plot", xlab = "Theoretical quantiles",
+     ylab = "Empirical quantiles", col = "red")
+abline(0, 1, col = "black") # Agrega una línea de referencia para una distribución perfecta
+
+
+
+
+# Calcular AIC y BIC
+n <- length(Datos$nmono)
+llf <- sum(dlnorm3(Datos$nmono, gamma = -0.01347245,meanlog = -0.40325803,sdlog =0.53709532))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+#lognormal de 3 parametros  para no enfermos 
+conv(mu=mean(noenfermos$nmono),sig=sd(noenfermos$nmono),skew=skewness(noenfermos$nmono),dist="lognorm3")
+
+x11()
+par(mfrow=c(1,2))
+hist(noenfermos$nmono,freq=F,ylim = c(0,1.4),breaks=10, 
+     main ="Histogram and theoretical densities",xlab = "data",col = "white")
+curve(dlnorm3(x, gamma = 0.05732773,meanlog = -0.50855315,sdlog =0.56999857 ), 
+      col = "red", lwd = 1, add = TRUE)
+ad.test(noenfermos$nmono,plnorm3,gamma = 0.05732773,meanlog = -0.50855315,sdlog =0.56999857)
+
+rlnorm3(324,0.05732773,-0.50855315,0.56999857)
+summary(rlnorm3(324,0.05732773,-0.50855315,0.56999857))
+summary(noenfermos$nmono)
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(noenfermos$nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma = 0.05732773,meanlog = -0.50855315,sdlog =0.56999857)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Q-Q plot", xlab = "Theoretical quantiles",
+     ylab = "Empirical quantiles", col = "red")
+abline(0, 1, col = "black") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(noenfermos$nmono)
+llf <- sum(dlnorm3(noenfermos$nmono, gamma = 0.05732773,meanlog = -0.50855315,sdlog =0.56999857))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+
+#lognormal de 3 parametros  para  enfermos
+conv(mu=mean(enfermos$nmono),sig=sd(enfermos$nmono),skew=skewness(enfermos$nmono),dist="lognorm3")
+x11()
+hist(enfermos$nmono,freq=F,ylim = c(0,2))
+curve(dlnorm3(x, gamma =  -1.3579496 ,meanlog = 0.6768385,sdlog = 0.2610858), 
+      col = "red", lwd = 2, add = TRUE)
+ad.test(enfermos$nmono,plnorm3,gamma =  -1.3579496 ,meanlog = 0.6768385,sdlog = 0.2610858)
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(enfermos$nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma =  -1.3579496 ,meanlog = 0.6768385,sdlog = 0.2610858)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para lnorm3", xlab = "Cuantiles de la distribución lnorm3",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(enfermos$nmono)
+llf <- sum(dlnorm3(enfermos$nmono, gamma =  -1.3579496 ,meanlog = 0.6768385,sdlog = 0.2610858))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+
+#lognormal de 3 parametros para toda la base de datos quitando los puntos atipicos
+conv(mu=mean(nmono),sig=sd(nmono),skew=skewness(nmono),dist="lognorm3")
+x11()
+hist(nmono,freq=F,ylim = c(0,2),breaks=50)
+curve(dlnorm3(x, gamma = -0.68919193,meanlog = 0.32196159,sdlog = 0.26895495), 
+      col = "red", lwd = 2, add = TRUE)
+ad.test(nmono,plnorm3,gamma = -0.68919193,meanlog = 0.32196159,sdlog = 0.26895495)
+
+rlnorm3(324,-0.68919193, 0.32196159,0.26895495)
+summary(rlnorm3(324, -0.68919193,0.32196159,0.26895495))
+summary(nmono)
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(nmono, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma = -0.68919193,meanlog = 0.32196159,sdlog = 0.26895495)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para lnorm3", xlab = "Cuantiles de la distribución lnorm3",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(nmono)
+llf <- sum(dlnorm3(nmono, gamma = -0.68919193,meanlog = 0.32196159,sdlog = 0.26895495))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#valor atipico de los monocitos en noenfermos
+Q1 <- quantile(noenfermos$nmono, 0.25)
+Q3 <- quantile(noenfermos$nmono, 0.75)
+# Calcule el rango intercuartílico (IQR)
+IQR <- Q3 - Q1
+# Calcule los límites para identificar valores atípicos
+limite_inferior <- Q1 - 1.5 * IQR
+limite_superior <- Q3 + 1.5 * IQR
+
+#valor atipico de los monocitos en enfermos
+Q1 <- quantile(enfermos$nmono, 0.25)
+Q3 <- quantile(enfermos$nmono, 0.75)
+# Calcule el rango intercuartílico (IQR)
+IQR <- Q3 - Q1
+# Calcule los límites para identificar valores atípicos
+limite_inferior <- Q1 - 1.5 * IQR
+limite_superior <- Q3 + 1.5 * IQR
+
+mean(enfermos$nmono)
+model=lm(nmono~1,data=enfermos);CD=cooks.distance(model)
+id_nmono=unname(which(CD>4*mean(CD))) 
+
+
+
+####Linfocitos_neutrofilos----
+
+#lognormal de 3 parametros para toda la base de datos
+conv(mu=mean(Datos$linfocitos_neutrofilos),sig=sd(Datos$linfocitos_neutrofilos),skew=skewness(Datos$linfocitos_neutrofilos),dist="lognorm3")
+x11()
+hist(Datos$linfocitos_neutrofilos,freq=F,ylim = c(0,2),breaks=50)
+curve(dlnorm3(x, gamma = -0.2138640,meanlog = -1.1020684,sdlog =1.3062920 ), 
+      col = "red", lwd = 2, add = TRUE)
+ad.test(Datos$linfocitos_neutrofilos,plnorm3,gamma = -0.2138640,meanlog = -1.1020684,sdlog =1.3062920 )
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(Datos$linfocitos_neutrofilos, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma = -0.2138640,meanlog = -1.1020684,sdlog =1.3062920 )
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para lnorm3", xlab = "Cuantiles de la distribución lnorm3",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(Datos$linfocitos_neutrofilos)
+llf <- sum(dlnorm3(Datos$linfocitos_neutrofilos, gamma = -0.2138640,meanlog = -1.1020684,sdlog =1.3062920))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+rlnorm3(324,-0.2138640,-1.1020684,1.3062920)
+summary(rlnorm3(1000,-0.2138640,-1.1020684,1.3062920))
+rlnorm(324,-1.042, 0.830  )
+summary(rlnorm(1000,-1.042, 0.830))
+
+summary(Datos$linfocitos_neutrofilos)
+
+#lognormal de 3 parametros para no enfermos
+conv(mu=mean(noenfermos$linfocitos_neutrofilos),sig=sd(noenfermos$linfocitos_neutrofilos),skew=skewness(noenfermos$linfocitos_neutrofilos),dist="lognorm3")
+x11()
+hist(noenfermos$linfocitos_neutrofilos,freq=F,ylim = c(0,2),breaks=50)
+curve(dlnorm3(x, gamma = -0.01713185,meanlog = -1.03762238,sdlog =0.78436403), 
+      col = "red", lwd = 2, add = TRUE)
+ad.test(noenfermos$linfocitos_neutrofilos,plnorm3,gamma = -0.01713185,meanlog = -1.03762238,sdlog =0.78436403)
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(noenfermos$linfocitos_neutrofilos, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma = -0.01713185,meanlog = -1.03762238,sdlog =0.78436403)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para lnorm3", xlab = "Cuantiles de la distribución lnorm3",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(noenfermos$linfocitos_neutrofilos)
+llf <- sum(dlnorm3(noenfermos$linfocitos_neutrofilos, gamma = -0.01713185,meanlog = -1.03762238,sdlog =0.78436403))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
+
+
+
+#lognormal de 3 parametros  para  enfermos
+conv(mu=mean(enfermos$linfocitos_neutrofilos),sig=sd(enfermos$linfocitos_neutrofilos),skew=skewness(enfermos$linfocitos_neutrofilos),dist="lognorm3")
+x11()
+hist(enfermos$linfocitos_neutrofilos,freq=F,ylim = c(0,2))
+curve(dlnorm3(x, gamma =  -3.3362258 ,meanlog = 1.2299873,sdlog = 0.9076772), 
+      col = "red", lwd = 2, add = TRUE)
+ad.test(enfermos$linfocitos_neutrofilos,plnorm3,gamma =  -3.3362258 ,meanlog = 1.2299873,sdlog = 0.9076772)
+
+#qqplot
+# Calcula los cuantiles de los datos observados y de la distribución lognormal de 3 parametros
+cuantiles_datos <- quantile(enfermos$linfocitos_neutrofilos, probs = seq(0, 1, length.out = n))
+cuantiles_nig <- qlnorm3(seq(0, 1, length.out = n),gamma =  -3.3362258 ,meanlog = 1.2299873,sdlog = 0.9076772)
+
+# Grafica el Q-Q plot
+x11()
+plot(cuantiles_nig, cuantiles_datos, main = "Gráfico Q-Q para lnorm3", xlab = "Cuantiles de la distribución lnorm3",
+     ylab = "Cuantiles de los datos observados", col = "blue")
+abline(0, 1, col = "red") # Agrega una línea de referencia para una distribución perfecta
+
+# Calcular AIC y BIC
+n <- length(enfermos$linfocitos_neutrofilos)
+llf <- sum(dlnorm3(enfermos$linfocitos_neutrofilos, gamma =  -3.3362258 ,meanlog = 1.2299873,sdlog = 0.9076772))
+aic <- 2 * 2 - 2 * llf
+bic <- log(n) * 2 - 2 * llf
